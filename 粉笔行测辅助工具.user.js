@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         粉笔行测辅助工具（收起+全屏+标注）
 // @namespace    http://tampermonkey.net/
-// @version      0.2.0
+// @version      0.2.1
 // @description  自动点击粉笔行测错题页收起按钮；全屏吸附+右上角可拖动笔工具/橡皮擦/撤销/清屏按钮；手动触发收起按钮（含内存清理）
 // @author       You
 // @match        https://www.fenbi.com/*/exam/error/practice/xingce/*
@@ -433,8 +433,15 @@
                 subButtonsContainer.style.display = 'flex';
                 // 重置橡皮擦按钮样式
                 eraserBtn.style.background = '#909399';
+            } else if (currentMode === 'eraser') {
+                // 从橡皮擦模式切换回笔模式
+                currentMode = 'pen';
+                penBtn.innerText = '关闭笔';
+                eraserBtn.style.background = '#909399';
+                canvas.style.cursor = penCursorUrl;
+                document.body.style.cursor = penCursorUrl;
             } else {
-                // 关闭笔工具
+                // 关闭笔工具（当前是笔模式）
                 isPenToolActive = false;
                 currentMode = null;
                 penBtn.style.background = '#409eff';
