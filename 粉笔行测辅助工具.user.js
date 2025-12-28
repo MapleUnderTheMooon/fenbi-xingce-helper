@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         粉笔行测辅助工具（收起+全屏+标注+时钟）
 // @namespace    http://tampermonkey.net/
-// @version      0.4.1
+// @version      0.4.2
 // @description  自动点击粉笔行测错题页收起按钮；全屏吸附+右上角可拖动笔工具/橡皮擦/撤销/清屏按钮；手动触发收起按钮（含内存清理）；全屏模式下显示可拖动时钟（支持边缘吸附和悬停滑出）
 // @author       You
 // @match        https://www.fenbi.com/*/exam/error/practice/xingce/*
@@ -745,8 +745,15 @@
         canvas.addEventListener('wheel', wheelEvent, { passive: true });
         resources.eventListeners.push({ element: canvas, type: 'wheel', handler: wheelEvent });
 
-        // 标注面板
-        const drawCtrlPanel = document.createElement('div');
+        // 标注面板 - 检查是否已存在，避免重复创建
+        let drawCtrlPanel = document.querySelector('#draw-control-panel');
+        if (drawCtrlPanel) {
+            // 面板已存在，直接返回，避免重复创建
+            return;
+        }
+
+        // 创建新面板
+        drawCtrlPanel = document.createElement('div');
         drawCtrlPanel.style.cssText = `
             position: fixed; top: 170px; right: 43px;
             display: flex; flex-direction: column; gap: 5px;
