@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         粉笔行测辅助工具（收起+全屏+标注+时钟）
 // @namespace    http://tampermonkey.net/
-// @version      0.4.2
+// @version      0.4.3
 // @description  自动点击粉笔行测错题页收起按钮；全屏吸附+右上角可拖动笔工具/橡皮擦/撤销/清屏按钮；手动触发收起按钮（含内存清理）；全屏模式下显示可拖动时钟（支持边缘吸附和悬停滑出）
 // @author       You
 // @match        https://www.fenbi.com/*/exam/error/practice/xingce/*
@@ -169,12 +169,106 @@
             handler: fullscreenClick
         });
 
+        // 3. 向下滚动按钮
+        const scrollDownContainer = document.createElement('div');
+        scrollDownContainer.style.cssText = `
+            position: fixed; right: 23px; top: 50%;
+            transform: translateY(-50%);
+            z-index: 9999; transition: all 0.3s ease;
+        `;
+        scrollDownContainer.id = 'scroll-down-container';
+        resources.elements.push(scrollDownContainer); // 加入清理列表
+
+        // 向下滚动按钮
+        const scrollDownBtn = document.createElement('button');
+        scrollDownBtn.style.cssText = `
+            width: 48px; height: 48px;
+            background: white; border: none; border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            cursor: pointer; transition: all 0.2s ease;
+            display: flex; align-items: center; justify-content: center;
+            padding: 0; outline: none;
+        `;
+        scrollDownBtn.id = 'custom-scroll-down-btn';
+        
+        // 创建向下箭头图标（SVG）
+        const arrowSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        arrowSvg.setAttribute('width', '20');
+        arrowSvg.setAttribute('height', '20');
+        arrowSvg.setAttribute('viewBox', '0 0 20 20');
+        arrowSvg.style.cssText = 'fill: #6b7280;';
+        
+        const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        arrowPath.setAttribute('d', 'M10 14L5 9l1.41-1.41L10 11.17l3.59-3.58L15 9l-5 5z');
+        arrowSvg.appendChild(arrowPath);
+        scrollDownBtn.appendChild(arrowSvg);
+
+        // hover效果
+        const scrollDownHoverIn = () => {
+            scrollDownBtn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.2)';
+            scrollDownBtn.style.transform = 'scale(1.05)';
+        };
+        const scrollDownHoverOut = () => {
+            scrollDownBtn.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+            scrollDownBtn.style.transform = 'scale(1)';
+        };
+        scrollDownBtn.addEventListener('mouseenter', scrollDownHoverIn);
+        scrollDownBtn.addEventListener('mouseleave', scrollDownHoverOut);
+        resources.eventListeners.push({
+            element: scrollDownBtn,
+            type: 'mouseenter',
+            handler: scrollDownHoverIn
+        });
+        resources.eventListeners.push({
+            element: scrollDownBtn,
+            type: 'mouseleave',
+            handler: scrollDownHoverOut
+        });
+
+        // 点击事件：平滑滚动到底部
+        const scrollDownClick = () => {
+            const scrollToBottomFenbiStyle = () => {
+                const el = document.getElementById('fenbi-web-exams');
+                if (!el) return;
+            
+                const mid = el.scrollTop + el.clientHeight * 0.9;
+                const end = el.scrollHeight;
+            
+                // 第一跳
+                el.scrollTop = mid;
+            
+                // 极短停顿，再跳到底
+                setTimeout(() => {
+                    el.scrollTop = end;
+                }, 120);
+            };
+
+            scrollToBottomFenbiStyle();
+            
+            // 视觉反馈
+            scrollDownBtn.style.background = '#f3f4f6';
+            setTimeout(() => {
+                scrollDownBtn.style.background = 'white';
+            }, 200);
+        };
+        scrollDownBtn.addEventListener('click', scrollDownClick);
+        resources.eventListeners.push({
+            element: scrollDownBtn,
+            type: 'click',
+            handler: scrollDownClick
+        });
+
+        scrollDownContainer.appendChild(scrollDownBtn);
+
         // 添加到页面（避免重复）
         if (!document.querySelector('#collapse-manual-container')) {
             document.body.appendChild(collapseManualContainer);
         }
         if (!document.querySelector('#fullscreen-container')) {
             document.body.appendChild(fullscreenContainer);
+        }
+        if (!document.querySelector('#scroll-down-container')) {
+            document.body.appendChild(scrollDownContainer);
         }
     }
 
