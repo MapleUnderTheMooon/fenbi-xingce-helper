@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         粉笔行测辅助工具（收起+全屏+标注+时钟）
 // @namespace    http://tampermonkey.net/
-// @version      0.4.0
+// @version      0.4.1
 // @description  自动点击粉笔行测错题页收起按钮；全屏吸附+右上角可拖动笔工具/橡皮擦/撤销/清屏按钮；手动触发收起按钮（含内存清理）；全屏模式下显示可拖动时钟（支持边缘吸附和悬停滑出）
 // @author       You
 // @match        https://www.fenbi.com/*/exam/error/practice/xingce/*
@@ -541,17 +541,26 @@
 
     // ===================== 标注工具（带清理） =====================
     function initDrawTool() {
-        // Canvas图层
-        const canvas = document.createElement('canvas');
-        canvas.id = 'custom-draw-canvas';
-        canvas.style.cssText = `
-            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-            z-index: 9998; background: rgba(50,50,50,0.1);
-            cursor: default; border: none; display: none;
-        `;
-        resources.elements.push(canvas); // 加入清理列表
-        document.body.appendChild(canvas);
-        const ctx = canvas.getContext('2d');
+        // Canvas图层 - 检查是否已存在，避免重复创建
+        let canvas = document.querySelector('#custom-draw-canvas');
+        let ctx;
+        
+        if (canvas) {
+            // 如果 canvas 已存在，复用现有的 canvas 和 ctx
+            ctx = canvas.getContext('2d');
+        } else {
+            // 如果不存在，创建新的 canvas
+            canvas = document.createElement('canvas');
+            canvas.id = 'custom-draw-canvas';
+            canvas.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+                z-index: 9998; background: rgba(50,50,50,0.1);
+                cursor: default; border: none; display: none;
+            `;
+            resources.elements.push(canvas); // 加入清理列表
+            document.body.appendChild(canvas);
+            ctx = canvas.getContext('2d');
+        }
 
         // 标注状态
         let isDrawing = false;
