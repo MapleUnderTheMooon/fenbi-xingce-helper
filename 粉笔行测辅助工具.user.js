@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         粉笔行测辅助工具（收起+全屏+标注+时钟）
 // @namespace    http://tampermonkey.net/
-// @version      0.3.0
+// @version      0.4.0
 // @description  自动点击粉笔行测错题页收起按钮；全屏吸附+右上角可拖动笔工具/橡皮擦/撤销/清屏按钮；手动触发收起按钮（含内存清理）；全屏模式下显示可拖动时钟（支持边缘吸附和悬停滑出）
 // @author       You
 // @match        https://www.fenbi.com/*/exam/error/practice/xingce/*
@@ -725,15 +725,15 @@
         resources.eventListeners.push({ element: canvas, type: 'mouseup', handler: drawMouseUp });
         resources.eventListeners.push({ element: canvas, type: 'mouseleave', handler: drawMouseLeave });
 
+
         // 滚轮事件：允许页面滚动
         const wheelEvent = (e) => {
             // 如果正在绘制，不处理滚轮事件
             if (isDrawing) return;
-            // 将滚轮事件传递给页面
-            e.preventDefault();
-            window.scrollBy(0, e.deltaY);
+            // 未按下鼠标时，不阻止默认行为，让浏览器自然处理滚轮事件，实现丝滑的页面滚动
+            // 不调用 e.preventDefault()，让页面自然滚动
         };
-        canvas.addEventListener('wheel', wheelEvent, { passive: false });
+        canvas.addEventListener('wheel', wheelEvent, { passive: true });
         resources.eventListeners.push({ element: canvas, type: 'wheel', handler: wheelEvent });
 
         // 标注面板
@@ -806,6 +806,10 @@
                 document.body.style.cursor = penCursorUrl;
                 // 显示子按钮
                 subButtonsContainer.style.display = 'flex';
+                // 显示关闭按钮
+                closeBtn.style.display = 'block';
+                // 显示清屏按钮
+                clearBtn.style.display = 'block';
                 // 重置橡皮擦按钮样式
                 eraserBtn.style.background = '#909399';
             } else if (currentMode === 'eraser') {
@@ -817,19 +821,57 @@
                 document.body.style.cursor = penCursorUrl;
             } else {
                 // 关闭笔工具（当前是笔模式）
-                isPenToolActive = false;
-                currentMode = null;
-                penBtn.style.background = '#409eff';
-                penBtn.innerText = '笔工具';
-                canvas.style.display = 'none';
-                canvas.style.cursor = 'default';
-                document.body.style.cursor = 'default';
-                // 隐藏子按钮
-                subButtonsContainer.style.display = 'none';
+                closeCanvas();
             }
         };
         penBtn.addEventListener('click', penClick);
         resources.eventListeners.push({ element: penBtn, type: 'click', handler: penClick });
+
+        // 右键快速打开/关闭笔工具功能
+        const rightClickToTogglePen = (e) => {
+            // 如果点击的是 canvas 元素，不处理（canvas 有自己的右键关闭功能）
+            if (e.target === canvas || canvas.contains(e.target)) {
+                return;
+            }
+
+            // 检查目标元素是否为可交互元素
+            const target = e.target;
+            const tagName = target.tagName.toUpperCase();
+            
+            // 排除可交互元素类型
+            const interactiveTags = ['BUTTON', 'A', 'INPUT', 'SELECT', 'TEXTAREA', 'LABEL'];
+            if (interactiveTags.includes(tagName)) {
+                return;
+            }
+
+            // 检查元素是否有 onclick 事件处理器
+            if (target.onclick) {
+                return;
+            }
+
+            // 检查鼠标样式是否为手型（pointer）
+            const computedStyle = window.getComputedStyle(target);
+            if (computedStyle.cursor === 'pointer') {
+                return;
+            }
+
+            // 检查父元素是否为可交互元素
+            if (target.closest('button, a, [onclick], [role="button"], input, select, textarea')) {
+                return;
+            }
+
+            // 满足条件，阻止默认右键菜单并根据状态切换
+            e.preventDefault();
+            if (isPenToolActive) {
+                // 如果笔工具已激活，关闭画布
+                closeCanvas();
+            } else {
+                // 如果笔工具未激活，激活画布
+                penClick();
+            }
+        };
+        document.addEventListener('contextmenu', rightClickToTogglePen);
+        resources.eventListeners.push({ element: document, type: 'contextmenu', handler: rightClickToTogglePen });
 
         // 橡皮擦按钮点击事件
         const eraserClick = () => {
@@ -883,7 +925,7 @@
         clearBtn.style.cssText = `
             width: 90px; height: 30px; border: none; border-radius: 4px;
             background: #f56c6c; color: white; cursor: pointer; transition: all 0.2s ease;
-            font-size: 14px;
+            font-size: 14px; display: none;
         `;
         clearBtn.innerText = '清屏（×）';
 
@@ -892,6 +934,24 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             // 清空历史记录
             drawHistory.length = 0;
+            // 只清除画布内容，不关闭画布
+        };
+        clearBtn.addEventListener('click', clearClick);
+        resources.eventListeners.push({ element: clearBtn, type: 'click', handler: clearClick });
+
+        // 关闭画布按钮（X按钮）
+        const closeBtn = document.createElement('button');
+        closeBtn.style.cssText = `
+            width: 90px; height: 30px; border: none; border-radius: 4px;
+            background: #f56c6c; color: white; cursor: pointer; transition: all 0.2s ease;
+            font-size: 14px; display: none;
+        `;
+        closeBtn.innerText = 'X';
+        closeBtn.id = 'close-canvas-btn';
+        resources.elements.push(closeBtn); // 加入清理列表
+
+        // 关闭画布函数（统一关闭逻辑）
+        const closeCanvas = () => {
             isPenToolActive = false;
             currentMode = null;
             penBtn.style.background = '#409eff';
@@ -901,11 +961,29 @@
             document.body.style.cursor = 'default';
             // 隐藏子按钮
             subButtonsContainer.style.display = 'none';
+            // 隐藏关闭按钮
+            closeBtn.style.display = 'none';
+            // 隐藏清屏按钮
+            clearBtn.style.display = 'none';
             // 重置橡皮擦按钮样式
             eraserBtn.style.background = '#909399';
         };
-        clearBtn.addEventListener('click', clearClick);
-        resources.eventListeners.push({ element: clearBtn, type: 'click', handler: clearClick });
+
+        // 关闭按钮点击事件
+        const closeClick = () => {
+            closeCanvas();
+        };
+        closeBtn.addEventListener('click', closeClick);
+        resources.eventListeners.push({ element: closeBtn, type: 'click', handler: closeClick });
+
+        // 右键关闭画布功能
+        const canvasRightClick = (e) => {
+            if (!isPenToolActive) return;
+            e.preventDefault(); // 阻止默认右键菜单
+            closeCanvas();
+        };
+        canvas.addEventListener('contextmenu', canvasRightClick);
+        resources.eventListeners.push({ element: canvas, type: 'contextmenu', handler: canvasRightClick });
 
         // 面板拖动逻辑
         let isDragging = false;
@@ -948,7 +1026,7 @@
         resources.eventListeners.push({ element: document, type: 'mouseup', handler: panelMouseUp });
 
         // 组装面板
-        drawCtrlPanel.append(penBtn, subButtonsContainer, clearBtn);
+        drawCtrlPanel.append(penBtn, subButtonsContainer, clearBtn, closeBtn);
         document.body.appendChild(drawCtrlPanel);
     }
 
