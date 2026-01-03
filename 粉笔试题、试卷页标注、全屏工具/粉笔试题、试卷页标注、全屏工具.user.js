@@ -321,7 +321,7 @@
         // 展开的按钮容器（默认隐藏，悬停时显示）
         const expandedButtonsContainer = document.createElement('div');
         expandedButtonsContainer.style.cssText = `
-            position: absolute; right: 60px; top: 0;
+            position: absolute; right: 47px; top: 100px;
             display: none; flex-direction: column; gap: 5px;
             padding: 5px; border-radius: 4px;
             background: rgba(255,255,255,0.95); box-shadow: 0 2px 8px rgba(0,0,0,0.15);
