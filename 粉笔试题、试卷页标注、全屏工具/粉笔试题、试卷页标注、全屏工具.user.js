@@ -309,7 +309,7 @@
         // 圆球按钮（收缩状态的主按钮）
         const penBtn = document.createElement('button');
         penBtn.style.cssText = `
-            position: absolute; right: 0; top: 0; width: 50px; height: 50px;
+            position: absolute; right: -23px; top: 100px; width: 50px; height: 50px;
             border-radius: 50%; background: #409eff; color: white; border: none;
             font-size: 14px; cursor: move; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
             transition: background 0.2s ease; display: flex; align-items: center; justify-content: center;
