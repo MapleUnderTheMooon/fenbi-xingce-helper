@@ -220,14 +220,14 @@
         drawCtrlPanel.id = 'draw-control-panel';
         resources.elements.push(drawCtrlPanel); // 加入清理列表
 
-        // 圆球按钮（收缩状态的主按钮） - 采用iPhone风格设计
+        // 圆球按钮（收缩状态的主按钮） - 采用iPhone风格设计，柔和蓝色
         const penBtn = document.createElement('button');
         penBtn.style.cssText = `
             position: absolute; right: 0; top: 0; width: 50px; height: 50px;
-            border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%; background: #4da6ff;
             color: white; border: none;
             font-size: 16px; font-weight: 600; cursor: move; 
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 15px rgba(77, 166, 255, 0.4);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
             display: flex; align-items: center; justify-content: center;
             text-align: center; padding: 0; user-select: none;
@@ -269,20 +269,20 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         `;
 
-        // 橡皮擦按钮
+        // 橡皮擦按钮 - 灰色系（直观表示擦除）
         const eraserBtn = document.createElement('button');
         eraserBtn.style.cssText = buttonStyle + `
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            color: white;
+            background: #f0f0f0;
+            color: #333333;
         `;
         eraserBtn.innerHTML = '🧽 橡皮擦';
         eraserBtn.id = 'eraser-btn';
 
-        // 撤销按钮
+        // 撤销按钮 - 蓝色系（直观表示返回操作）
         const undoBtn = document.createElement('button');
         undoBtn.style.cssText = buttonStyle + `
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-            color: white;
+            background: #e6f2ff;
+            color: #0066cc;
         `;
         undoBtn.innerHTML = '↩ 撤销';
         undoBtn.id = 'undo-btn';
@@ -390,7 +390,7 @@
                 // 激活笔工具（默认笔模式）
                 isPenToolActive = true;
                 currentMode = 'pen';
-                penBtn.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+                penBtn.style.background = '#4da6ff';
                 penBtn.innerHTML = '✏️';
                 penBtn.style.cursor = 'pointer';
                 canvas.style.display = 'block';
@@ -399,11 +399,11 @@
                 document.body.style.cursor = penCursorUrl;
                 drawCtrlPanel.style.display = 'block';
                 // 重置橡皮擦按钮样式
-                eraserBtn.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+                eraserBtn.style.background = '#f0f0f0';
             } else if (currentMode === 'eraser') {
                 // 从橡皮擦模式切换回笔模式
                 currentMode = 'pen';
-                eraserBtn.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+                eraserBtn.style.background = '#f0f0f0';
                 canvas.style.cursor = penCursorUrl;
                 document.body.style.cursor = penCursorUrl;
             } else {
@@ -419,13 +419,13 @@
             if (currentMode === 'pen') {
                 // 切换到橡皮擦模式
                 currentMode = 'eraser';
-                eraserBtn.style.background = 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)';
+                eraserBtn.style.background = '#d9d9d9';
                 canvas.style.cursor = eraserCursorUrl;
                 document.body.style.cursor = eraserCursorUrl;
             } else if (currentMode === 'eraser') {
                 // 切换回笔模式
                 currentMode = 'pen';
-                eraserBtn.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+                eraserBtn.style.background = '#f0f0f0';
                 canvas.style.cursor = penCursorUrl;
                 document.body.style.cursor = penCursorUrl;
             }
@@ -449,21 +449,21 @@
             // 重绘所有剩余笔画
             redrawAll();
 
-            // 视觉反馈：按钮闪烁
-            undoBtn.style.background = 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)';
+            // 视觉反馈：按钮闪烁，保持柔和配色
+            undoBtn.style.background = '#cce7ff';
             setTimeout(() => {
-                undoBtn.style.background = 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)';
+                undoBtn.style.background = '#e6f2ff';
             }, 200);
         };
 
         undoBtn.addEventListener('click', undoClick);
         resources.eventListeners.push({ element: undoBtn, type: 'click', handler: undoClick });
 
-        // 清屏按钮（优先显示）
+        // 清屏按钮（优先显示） - 橙色系（直观表示清除操作）
         const clearBtn = document.createElement('button');
         clearBtn.style.cssText = buttonStyle + `
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-            color: white;
+            background: #fff2e6;
+            color: #ff6600;
         `;
         clearBtn.innerHTML = '🗑️ 清屏';
         clearBtn.id = 'clear-btn';
@@ -478,11 +478,11 @@
         clearBtn.addEventListener('click', clearClick);
         resources.eventListeners.push({ element: clearBtn, type: 'click', handler: clearClick });
 
-        // 关闭画布按钮（X按钮）
+        // 关闭画布按钮（X按钮） - 红色系（直观表示关闭操作）
         const closeBtn = document.createElement('button');
         closeBtn.style.cssText = buttonStyle + `
-            background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-            color: white;
+            background: #ffe6e6;
+            color: #cc0000;
         `;
         closeBtn.innerHTML = '❌ 关闭';
         closeBtn.id = 'close-canvas-btn';
@@ -492,7 +492,7 @@
         const closeCanvas = () => {
             isPenToolActive = false;
             currentMode = null;
-            penBtn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            penBtn.style.background = '#4da6ff';
             penBtn.innerHTML = '✏️';
             penBtn.style.cursor = 'move';
             canvas.style.display = 'none';
@@ -503,7 +503,7 @@
             // 隐藏展开容器，但保留圆球显示
             expandedButtonsContainer.style.display = 'none';
             // 重置橡皮擦按钮样式
-            eraserBtn.style.background = 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)';
+            eraserBtn.style.background = '#f0f0f0';
         };
 
         // 关闭按钮点击事件
