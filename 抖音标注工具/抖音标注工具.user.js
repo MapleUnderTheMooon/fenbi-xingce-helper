@@ -660,6 +660,32 @@
             }
         };
 
+        // 全屏事件处理函数
+        const handleFullscreenChange = () => {
+            const fullscreenElement = document.fullscreenElement;
+            if (fullscreenElement) {
+                // 进入全屏模式：将元素移动到全屏容器中
+                if (canvas.parentNode !== fullscreenElement) {
+                    fullscreenElement.appendChild(canvas);
+                }
+                if (drawCtrlPanel.parentNode !== fullscreenElement) {
+                    fullscreenElement.appendChild(drawCtrlPanel);
+                }
+                // 调整canvas大小
+                resizeCanvas();
+            } else {
+                // 退出全屏模式：将元素移回document.body
+                if (canvas.parentNode !== document.body) {
+                    document.body.appendChild(canvas);
+                }
+                if (drawCtrlPanel.parentNode !== document.body) {
+                    document.body.appendChild(drawCtrlPanel);
+                }
+                // 调整canvas大小
+                resizeCanvas();
+            }
+        };
+
         // 键盘快捷键：Ctrl+Shift+D（避免抖音监控的键）
         const handleKeyPress = (e) => {
             // 检查是否按下了Ctrl+Shift+D
@@ -674,6 +700,14 @@
             element: window,
             type: 'keydown',
             handler: handleKeyPress
+        });
+
+        // 添加全屏事件监听器
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        resources.eventListeners.push({
+            element: document,
+            type: 'fullscreenchange',
+            handler: handleFullscreenChange
         });
     }
 
