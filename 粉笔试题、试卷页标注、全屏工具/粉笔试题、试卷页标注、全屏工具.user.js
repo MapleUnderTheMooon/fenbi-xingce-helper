@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         粉笔试题、试卷页标注、全屏工具
 // @namespace    http://tampermonkey.net/
-// @version      0.0.3
+// @version      0.0.4
 // @description  试题、试卷页标注、全屏工具
 // @author       spl
 // @match        https://spa.fenbi.com/*/exam/*
@@ -299,33 +299,41 @@
         // 创建新面板容器（收缩式圆球设计）
         drawCtrlPanel = document.createElement('div');
         drawCtrlPanel.style.cssText = `
-            position: fixed; right: 20px; top: 20px;
+            position: fixed; right: 65px; top: 160px;
             width: 50px; height: 50px; border-radius: 50%; overflow: visible;
             z-index: 9999; transition: none; user-select: none;
+            display: block;
         `;
         drawCtrlPanel.id = 'draw-control-panel';
         resources.elements.push(drawCtrlPanel); // 加入清理列表
 
-        // 圆球按钮（收缩状态的主按钮）
+        // 圆球按钮（收缩状态的主按钮） - 采用iPhone风格设计，柔和蓝色
         const penBtn = document.createElement('button');
         penBtn.style.cssText = `
-            position: absolute; right: -23px; top: 100px; width: 50px; height: 50px;
-            border-radius: 50%; background: #409eff; color: white; border: none;
-            font-size: 14px; cursor: move; box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-            transition: background 0.2s ease; display: flex; align-items: center; justify-content: center;
+            position: absolute; right: 0; top: 0; width: 50px; height: 50px;
+            border-radius: 50%; background: #4da6ff;
+            color: white; border: none;
+            font-size: 16px; font-weight: 600; cursor: move; 
+            box-shadow: 0 4px 15px rgba(77, 166, 255, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            display: flex; align-items: center; justify-content: center;
             text-align: center; padding: 0; user-select: none;
+            backdrop-filter: blur(10px);
         `;
-        penBtn.innerText = '笔';
+        penBtn.innerText = '✏️';
         penBtn.id = 'pen-tool-btn';
 
-        // 展开的按钮容器（默认隐藏，悬停时显示）
+        // 展开的按钮容器（默认隐藏，悬停时显示） - 采用iPhone风格设计
         const expandedButtonsContainer = document.createElement('div');
         expandedButtonsContainer.style.cssText = `
-            position: absolute; right: 47px; top: 100px;
-            display: none; flex-direction: column; gap: 5px;
-            padding: 5px; border-radius: 4px;
-            background: rgba(255,255,255,0.95); box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-            transition: opacity 0.2s ease; pointer-events: auto;
+            position: absolute; right: 60px; top: 0;
+            display: none; flex-direction: column; gap: 8px;
+            padding: 12px;border-radius: 16px;
+            background: rgba(255, 255, 255, 0.95); 
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(20px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: auto;
         `;
         expandedButtonsContainer.id = 'expanded-buttons-container';
         resources.elements.push(expandedButtonsContainer); // 加入清理列表
@@ -333,29 +341,37 @@
         // 子按钮容器（用于存放橡皮擦和撤销）
         const subButtonsContainer = document.createElement('div');
         subButtonsContainer.style.cssText = `
-            display: flex; flex-direction: column; gap: 5px;
+            display: flex; flex-direction: column; gap: 8px;
         `;
         subButtonsContainer.id = 'sub-buttons-container';
         resources.elements.push(subButtonsContainer); // 加入清理列表
 
-        // 橡皮擦按钮
-        const eraserBtn = document.createElement('button');
-        eraserBtn.style.cssText = `
-            width: 90px; height: 30px; border: none; border-radius: 4px;
-            background: #909399; color: white; cursor: pointer; transition: all 0.2s ease;
-            font-size: 14px;
+        // 按钮样式 - iPhone风格
+        const buttonStyle = `
+            width: 100px; height: 40px; border: none; border-radius: 12px;
+            font-size: 14px; font-weight: 500; cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; align-items: center; justify-content: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         `;
-        eraserBtn.innerText = '🧽 橡皮擦';
+
+        // 橡皮擦按钮 - 灰色系（直观表示擦除）
+        const eraserBtn = document.createElement('button');
+        eraserBtn.style.cssText = buttonStyle + `
+            background: #f0f0f0;
+            color: #333333;
+        `;
+        eraserBtn.innerHTML = '🧽 橡皮擦';
         eraserBtn.id = 'eraser-btn';
 
-        // 撤销按钮
+        // 撤销按钮 - 蓝色系（直观表示返回操作）
         const undoBtn = document.createElement('button');
-        undoBtn.style.cssText = `
-            width: 90px; height: 30px; border: none; border-radius: 4px;
-            background: #f56c6c; color: white; cursor: pointer; transition: all 0.2s ease;
-            font-size: 14px;
+        undoBtn.style.cssText = buttonStyle + `
+            background: #e6f2ff;
+            color: #0066cc;
         `;
-        undoBtn.innerText = '↩ 撤销';
+        undoBtn.innerHTML = '↩ 撤销';
         undoBtn.id = 'undo-btn';
 
         // 组装子按钮容器
@@ -366,7 +382,7 @@
         // 橡皮擦光标：圆形虚线框（半径10px，直径30px）
         const eraserCursorUrl = 'url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAiIGhlaWdodD0iMzAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMTUiIGN5PSIxNSIgcj0iMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzU1NSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtZGFzaGFycmF5PSIzLDMiLz48L3N2Zz4=") 15 15, auto';
 
-        // 拖动功能
+        // 拖动功能 - 简化实现，参考粉笔工具
         let isDragging = false;
         let hasDragged = false; // 标记是否发生了拖动
         let dragStartX = 0;
@@ -374,6 +390,7 @@
         let panelStartX = 0;
         let panelStartY = 0;
 
+        // 拖动开始事件处理
         const startDrag = (e) => {
             // 如果正在绘制，不启动拖动
             if (isPenToolActive && isDrawing) return;
@@ -387,8 +404,13 @@
             panelStartY = rect.top;
             penBtn.style.cursor = 'grabbing';
             e.preventDefault();
+            
+            // 添加mousemove和mouseup事件监听器
+            document.addEventListener('mousemove', doDrag);
+            document.addEventListener('mouseup', stopDrag);
         };
 
+        // 拖动过程事件处理 - 直接更新位置，跟随鼠标
         const doDrag = (e) => {
             if (!isDragging) return;
             const deltaX = e.clientX - dragStartX;
@@ -399,25 +421,33 @@
                 hasDragged = true;
             }
             
+            // 计算新位置
             const newX = panelStartX + deltaX;
             const newY = panelStartY + deltaY;
             
             // 限制在可视区域内
             const maxX = window.innerWidth - 50;
             const maxY = window.innerHeight - 50;
-            const finalX = Math.max(0, Math.min(newX, maxX));
-            const finalY = Math.max(0, Math.min(newY, maxY));
+            const clampedX = Math.max(0, Math.min(newX, maxX));
+            const clampedY = Math.max(0, Math.min(newY, maxY));
             
-            drawCtrlPanel.style.left = finalX + 'px';
-            drawCtrlPanel.style.top = finalY + 'px';
+            // 直接设置位置，跟随鼠标
+            drawCtrlPanel.style.left = clampedX + 'px';
+            drawCtrlPanel.style.top = clampedY + 'px';
             drawCtrlPanel.style.right = 'auto';
             drawCtrlPanel.style.bottom = 'auto';
         };
 
+        // 拖动结束事件处理
         const stopDrag = (e) => {
             if (isDragging) {
                 isDragging = false;
                 penBtn.style.cursor = isPenToolActive ? 'pointer' : 'move';
+                
+                // 移除mousemove和mouseup事件监听器
+                document.removeEventListener('mousemove', doDrag);
+                document.removeEventListener('mouseup', stopDrag);
+                
                 // 如果发生了拖动，延迟重置 hasDragged，避免触发点击事件
                 if (hasDragged) {
                     setTimeout(() => {
@@ -427,12 +457,12 @@
             }
         };
 
-        penBtn.addEventListener('mousedown', startDrag);
-        document.addEventListener('mousemove', doDrag);
-        document.addEventListener('mouseup', stopDrag);
+        // 添加mousedown事件监听器
+        penBtn.addEventListener('mousedown', startDrag, { passive: false });
+        
+        // 注册资源清理
         resources.eventListeners.push({ element: penBtn, type: 'mousedown', handler: startDrag });
-        resources.eventListeners.push({ element: document, type: 'mousemove', handler: doDrag });
-        resources.eventListeners.push({ element: document, type: 'mouseup', handler: stopDrag });
+        // mousemove和mouseup事件在startDrag中动态添加，stopDrag中移除，无需注册到资源清理列表
 
         // 笔工具点击事件
         const penClick = (e) => {
@@ -446,8 +476,8 @@
                 // 激活笔工具（默认笔模式）
                 isPenToolActive = true;
                 currentMode = 'pen';
-                penBtn.style.background = '#66b1ff';
-                penBtn.innerText = '笔';
+                penBtn.style.background = '#4da6ff';
+                penBtn.innerHTML = '✏️';
                 penBtn.style.cursor = 'pointer';
                 canvas.style.display = 'block';
                 resizeCanvas();
@@ -455,11 +485,11 @@
                 document.body.style.cursor = penCursorUrl;
                 drawCtrlPanel.style.display = 'block';
                 // 重置橡皮擦按钮样式
-                eraserBtn.style.background = '#909399';
+                eraserBtn.style.background = '#f0f0f0';
             } else if (currentMode === 'eraser') {
                 // 从橡皮擦模式切换回笔模式
                 currentMode = 'pen';
-                eraserBtn.style.background = '#909399';
+                eraserBtn.style.background = '#f0f0f0';
                 canvas.style.cursor = penCursorUrl;
                 document.body.style.cursor = penCursorUrl;
             } else {
@@ -551,24 +581,29 @@
             // 重绘所有剩余笔画
             redrawAll();
 
-            // 视觉反馈：按钮闪烁
-            undoBtn.style.background = '#f78989';
+            // 视觉反馈：按钮闪烁，保持柔和配色
+            undoBtn.style.background = '#cce7ff';
             setTimeout(() => {
-                undoBtn.style.background = '#f56c6c';
+                undoBtn.style.background = '#e6f2ff';
             }, 200);
         };
 
         undoBtn.addEventListener('click', undoClick);
         resources.eventListeners.push({ element: undoBtn, type: 'click', handler: undoClick });
 
-        // 清屏按钮（优先显示）
+        // 清屏按钮（优先显示） - 橙色系（直观表示清除操作）
         const clearBtn = document.createElement('button');
         clearBtn.style.cssText = `
-            width: 90px; height: 60px; border: none; border-radius: 4px;
-            background: #f56c6c; color: white; cursor: pointer; transition: all 0.2s ease;
-            font-size: 14px;
+            width: 100px; height: 60px; border: none; border-radius: 12px;
+            font-size: 14px; font-weight: 500; cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; align-items: center; justify-content: center;
+            gap: 6px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            background: #fff2e6;
+            color: #ff6600;
         `;
-        clearBtn.innerText = '清屏（×）';
+        clearBtn.innerHTML = '🗑️ 清屏';
         clearBtn.id = 'clear-btn';
 
         // 清屏点击事件
@@ -581,14 +616,13 @@
         clearBtn.addEventListener('click', clearClick);
         resources.eventListeners.push({ element: clearBtn, type: 'click', handler: clearClick });
 
-        // 关闭画布按钮（X按钮）
+        // 关闭画布按钮（X按钮） - 红色系（直观表示关闭操作）
         const closeBtn = document.createElement('button');
-        closeBtn.style.cssText = `
-            width: 90px; height: 30px; border: none; border-radius: 4px;
-            background: #f56c6c; color: white; cursor: pointer; transition: all 0.2s ease;
-            font-size: 14px;
+        closeBtn.style.cssText = buttonStyle + `
+            background: #ffe6e6;
+            color: #cc0000;
         `;
-        closeBtn.innerText = 'X';
+        closeBtn.innerHTML = '❌ 关闭';
         closeBtn.id = 'close-canvas-btn';
         resources.elements.push(closeBtn); // 加入清理列表
 
@@ -596,8 +630,8 @@
         const closeCanvas = () => {
             isPenToolActive = false;
             currentMode = null;
-            penBtn.style.background = '#409eff';
-            penBtn.innerText = '笔';
+            penBtn.style.background = '#4da6ff';
+            penBtn.innerHTML = '✏️';
             penBtn.style.cursor = 'move';
             canvas.style.display = 'none';
             canvas.style.cursor = 'default';
@@ -607,7 +641,7 @@
             // 隐藏展开容器，但保留圆球显示
             expandedButtonsContainer.style.display = 'none';
             // 重置橡皮擦按钮样式
-            eraserBtn.style.background = '#909399';
+            eraserBtn.style.background = '#f0f0f0';
         };
 
         // 关闭按钮点击事件
