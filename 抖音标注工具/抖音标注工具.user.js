@@ -1,10 +1,11 @@
 // ==UserScript==
-// @name         抖音标注工具
+// @name         抖音&哔哩哔哩标注工具
 // @namespace    http://tampermonkey.net/
-// @version      0.0.1
-// @description  抖音网页版标注工具，支持画笔、橡皮擦、撤销等功能
+// @version      0.0.2
+// @description  抖音和哔哩哔哩网页标注工具，支持画笔、橡皮擦、撤销等功能
 // @author       spl
 // @match        https://www.douyin.com/*
+// @match        https://www.bilibili.com/*
 // @grant        none
 // ==/UserScript==
 
@@ -741,7 +742,7 @@
     function init() {
         initDrawTool();
         isInitialized = true;
-        console.log('抖音标注工具已加载完成，按 Ctrl+Shift+D 显示/隐藏工具');
+        console.log('抖音&哔哩哔哩标注工具已加载完成，按 Ctrl+Shift+D 显示/隐藏工具');
 
         // 页面卸载时清理资源
         window.addEventListener('beforeunload', cleanUpAllResources);
@@ -749,7 +750,7 @@
 
     // 页面初次加载时执行一次
     setTimeout(() => {
-        console.log('抖音标注工具初始化...');
+        console.log('抖音&哔哩哔哩标注工具初始化...');
         init();
     }, 1000);
 })();
