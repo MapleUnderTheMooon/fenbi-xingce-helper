@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         粉笔试题、试卷页标注、全屏工具
 // @namespace    http://tampermonkey.net/
-// @version      0.0.5
+// @version      0.0.7
 // @description  试题、试卷页标注、全屏工具
 // @author       spl
 // @match        https://spa.fenbi.com/*/exam/*
@@ -17,6 +17,27 @@
         eventListeners: []    // 绑定的事件监听
     };
 
+    // ========== 辅助函数 ==========
+    // 检查元素是否在页面中可见
+    function isElementVisible(element) {
+        if (!element) return false;
+        
+        // 获取元素的计算样式
+        const style = window.getComputedStyle(element);
+        
+        // 检查关键CSS属性
+        if (style.display === 'none') return false;
+        if (style.visibility === 'hidden') return false;
+        if (style.opacity === '0') return false;
+        
+        // 检查元素是否有尺寸
+        if (element.offsetWidth === 0 && element.offsetHeight === 0) return false;
+        
+        // 检查元素是否在DOM中
+        if (!document.body.contains(element)) return false;
+        
+        return true;
+    }
 
 
     // ===================== 右下角按钮组（带清理） =====================
@@ -775,6 +796,44 @@
         expandedButtonsContainer.style.display = 'none';
     }
 
+    // ===================== 空格键处理函数（移到外部避免重复创建） =====================
+    const handleSpacePress = (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault(); // 阻止默认的空格键行为（如页面滚动）
+            
+            // 查找两个按钮
+            const pauseBtn = document.querySelector('.continue-btn');
+            const continueBtn = document.querySelector('.modal-action-btn.btn-submit');
+            
+            // 检查按钮是否存在且可见
+            const isPauseBtnVisible = isElementVisible(pauseBtn);
+            const isContinueBtnVisible = isElementVisible(continueBtn);
+            
+            // 只点击可见的按钮，并在点击后隐藏它
+            if (isPauseBtnVisible) {
+                pauseBtn.click();
+                // 手动设置display为none，确保按钮被隐藏
+                pauseBtn.style.display = 'none';
+                // 显示相对的按钮
+                if (continueBtn) {
+                    continueBtn.style.display = 'block';
+                }
+                console.log('已点击并隐藏暂停按钮，显示继续作答按钮');
+                return; // 确保只处理一个按钮
+            } else if (isContinueBtnVisible) {
+                continueBtn.click();
+                // 手动设置display为none，确保按钮被隐藏
+                continueBtn.style.display = 'none';
+                // 显示相对的按钮
+                if (pauseBtn) {
+                    pauseBtn.style.display = 'block';
+                }
+                console.log('已点击并隐藏继续作答按钮，显示暂停按钮');
+                return; // 确保只处理一个按钮
+            }
+        }
+    };
+
     // ===================== 核心清理逻辑（关键） =====================
     function cleanUpAllResources() {
         console.log('开始清理资源...');
@@ -807,6 +866,14 @@
         initDrawTool();
         isInitialized = true;
         console.log('试题、试卷页标注、全屏工具已加载完成');
+
+        // 绑定空格键事件
+        document.addEventListener('keydown', handleSpacePress);
+        resources.eventListeners.push({
+            element: document,
+            type: 'keydown',
+            handler: handleSpacePress
+        });
 
         // 页面卸载时清理资源
         window.addEventListener('beforeunload', cleanUpAllResources);
