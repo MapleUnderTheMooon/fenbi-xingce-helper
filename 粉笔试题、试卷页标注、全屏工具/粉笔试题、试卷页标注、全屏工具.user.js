@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         粉笔试题、试卷页标注、全屏工具
 // @namespace    http://tampermonkey.net/
-// @version      0.0.8
+// @version      0.0.9
 // @description  试题、试卷页标注、全屏工具
 // @author       spl
 // @match        https://spa.fenbi.com/*/exam/*
@@ -850,6 +850,28 @@
                 syncButtonStates(continueBtn);
                 console.log('已点击并隐藏继续作答按钮，显示暂停按钮');
                 return; // 确保只处理一个按钮
+            }
+        } else if (e.code === 'KeyH') {
+            e.preventDefault(); // 阻止默认的 H 键行为
+            
+            // 检查当前是否全屏
+            const isFull = document.fullscreenElement;
+            const fullscreenBtn = document.querySelector('#custom-fullscreen-btn');
+            
+            if (!isFull) {
+                // 进入全屏
+                document.documentElement.requestFullscreen() || document.documentElement.webkitRequestFullscreen();
+                if (fullscreenBtn) {
+                    fullscreenBtn.innerText = '退出';
+                }
+                console.log('H键：进入全屏');
+            } else {
+                // 退出全屏
+                document.exitFullscreen() || document.documentElement.webkitExitFullscreen();
+                if (fullscreenBtn) {
+                    fullscreenBtn.innerText = '全屏';
+                }
+                console.log('H键：退出全屏');
             }
         }
     };
