@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         粉笔试题、试卷页标注、全屏工具
 // @namespace    http://tampermonkey.net/
-// @version      0.0.4
+// @version      0.0.5
 // @description  试题、试卷页标注、全屏工具
 // @author       spl
 // @match        https://spa.fenbi.com/*/exam/*
@@ -299,7 +299,7 @@
         // 创建新面板容器（收缩式圆球设计）
         drawCtrlPanel = document.createElement('div');
         drawCtrlPanel.style.cssText = `
-            position: fixed; right: 65px; top: 160px;
+            position: fixed; right: 355px; top: 10px;
             width: 50px; height: 50px; border-radius: 50%; overflow: visible;
             z-index: 9999; transition: none; user-select: none;
             display: block;
