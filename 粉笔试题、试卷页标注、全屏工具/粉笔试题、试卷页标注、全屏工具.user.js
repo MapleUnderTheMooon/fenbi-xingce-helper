@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         粉笔试题、试卷页标注、全屏工具
 // @namespace    http://tampermonkey.net/
-// @version      0.0.7
+// @version      0.0.8
 // @description  试题、试卷页标注、全屏工具
 // @author       spl
 // @match        https://spa.fenbi.com/*/exam/*
@@ -797,6 +797,34 @@
     }
 
     // ===================== 空格键处理函数（移到外部避免重复创建） =====================
+    // 同步按钮状态函数
+    const syncButtonStates = (clickedButton) => {
+        // 查找两个按钮
+        const pauseBtn = document.querySelector('.continue-btn');
+        const continueBtn = document.querySelector('.modal-action-btn.btn-submit');
+        
+        // 如果点击的是暂停按钮
+        if (clickedButton === pauseBtn && isElementVisible(pauseBtn)) {
+            // 隐藏暂停按钮
+            pauseBtn.style.display = 'none';
+            // 显示继续作答按钮
+            if (continueBtn) {
+                continueBtn.style.display = 'block';
+            }
+            console.log('已同步：点击暂停按钮，隐藏并显示继续作答按钮');
+        } 
+        // 如果点击的是继续作答按钮
+        else if (clickedButton === continueBtn && isElementVisible(continueBtn)) {
+            // 隐藏继续作答按钮
+            continueBtn.style.display = 'none';
+            // 显示暂停按钮
+            if (pauseBtn) {
+                pauseBtn.style.display = 'block';
+            }
+            console.log('已同步：点击继续作答按钮，隐藏并显示暂停按钮');
+        }
+    };
+
     const handleSpacePress = (e) => {
         if (e.code === 'Space') {
             e.preventDefault(); // 阻止默认的空格键行为（如页面滚动）
@@ -812,22 +840,14 @@
             // 只点击可见的按钮，并在点击后隐藏它
             if (isPauseBtnVisible) {
                 pauseBtn.click();
-                // 手动设置display为none，确保按钮被隐藏
-                pauseBtn.style.display = 'none';
-                // 显示相对的按钮
-                if (continueBtn) {
-                    continueBtn.style.display = 'block';
-                }
+                // 调用同步函数确保状态一致
+                syncButtonStates(pauseBtn);
                 console.log('已点击并隐藏暂停按钮，显示继续作答按钮');
                 return; // 确保只处理一个按钮
             } else if (isContinueBtnVisible) {
                 continueBtn.click();
-                // 手动设置display为none，确保按钮被隐藏
-                continueBtn.style.display = 'none';
-                // 显示相对的按钮
-                if (pauseBtn) {
-                    pauseBtn.style.display = 'block';
-                }
+                // 调用同步函数确保状态一致
+                syncButtonStates(continueBtn);
                 console.log('已点击并隐藏继续作答按钮，显示暂停按钮');
                 return; // 确保只处理一个按钮
             }
@@ -873,6 +893,43 @@
             element: document,
             type: 'keydown',
             handler: handleSpacePress
+        });
+
+        // 添加按钮点击事件监听器（使用事件委托）
+        const handleButtonClick = (e) => {
+            console.log('捕获到点击事件，目标元素:', e.target);
+            console.log('目标元素类名:', e.target.className);
+            console.log('目标元素标签名:', e.target.tagName);
+            
+            // 检查点击的元素是否是暂停按钮或其内部元素
+            const pauseBtn = e.target.closest('.continue-btn');
+            // 检查点击的元素是否是继续作答按钮或其内部元素
+            // 尝试多种可能的选择器，确保能找到继续作答按钮
+            const continueBtn = e.target.closest('.modal-action-btn.btn-submit') || 
+                               e.target.closest('.btn-submit') || 
+                               e.target.closest('.modal-action-btn');
+            
+            console.log('找到的暂停按钮:', pauseBtn);
+            console.log('找到的继续作答按钮:', continueBtn);
+            
+            // 如果点击的是暂停按钮
+            if (pauseBtn) {
+                console.log('手动点击了暂停按钮');
+                syncButtonStates(pauseBtn);
+            } 
+            // 如果点击的是继续作答按钮
+            else if (continueBtn) {
+                console.log('手动点击了继续作答按钮');
+                syncButtonStates(continueBtn);
+            }
+        };
+        
+        // 使用捕获阶段监听，确保事件不会被阻止
+        document.addEventListener('click', handleButtonClick, { capture: true });
+        resources.eventListeners.push({
+            element: document,
+            type: 'click',
+            handler: handleButtonClick
         });
 
         // 页面卸载时清理资源
