@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         粉笔试题、试卷页标注、全屏工具
 // @namespace    http://tampermonkey.net/
-// @version      0.0.10
+// @version      0.0.11
 // @description  试题、试卷页标注、全屏工具
 // @author       spl
 // @match        https://spa.fenbi.com/*/exam/*
@@ -799,6 +799,86 @@
         expandedButtonsContainer.style.display = 'none';
     }
 
+    // ===================== 快捷键提示功能 =====================
+    function generateShortcutHint() {
+        // 检查是否已存在，避免重复创建
+        let hintPanel = document.querySelector('#shortcut-hint-panel');
+        if (hintPanel) {
+            return;
+        }
+
+        // 创建提示面板容器
+        hintPanel = document.createElement('div');
+        hintPanel.style.cssText = `
+            position: fixed; left: 20px; bottom: 20px;
+            padding: 12px 16px;
+            background: rgba(50, 50, 50, 0.8);
+            color: white;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.4;
+            z-index: 9999;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(5px);
+            user-select: none;
+            display: none;
+        `;
+        hintPanel.id = 'shortcut-hint-panel';
+        resources.elements.push(hintPanel); // 加入清理列表
+
+        // 快捷键列表
+        const shortcuts = [
+            { key: '空格键', desc: '切换暂停/继续作答' },
+            { key: 'H键', desc: '切换全屏模式' },
+            { key: 'X键', desc: '清屏（标注工具激活时）' },
+            { key: '右键', desc: '快速打开/关闭标注工具' }
+        ];
+
+        // 生成快捷键提示内容
+        let content = '<div style="font-weight: 600; margin-bottom: 6px; font-size: 14px;">快捷键提示</div>';
+        shortcuts.forEach(item => {
+            content += `<div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                <span style="color: #ffd700;">${item.key}</span>
+                <span>${item.desc}</span>
+            </div>`;
+        });
+
+        // 添加显示/隐藏提示
+        content += '<div style="margin-top: 8px; font-size: 12px; color: #ccc;">按 ? 键显示/隐藏提示</div>';
+        hintPanel.innerHTML = content;
+
+        // 添加到页面
+        document.body.appendChild(hintPanel);
+
+        // 显示/隐藏控制
+        const toggleHintPanel = (e) => {
+            if (e.code === 'Slash' && e.shiftKey) { // ? 键
+                e.preventDefault();
+                if (hintPanel.style.display === 'block') {
+                    hintPanel.style.display = 'none';
+                } else {
+                    hintPanel.style.display = 'block';
+                }
+            }
+        };
+
+        // 绑定事件
+        document.addEventListener('keydown', toggleHintPanel);
+        resources.eventListeners.push({
+            element: document,
+            type: 'keydown',
+            handler: toggleHintPanel
+        });
+
+        // 初始显示3秒后自动隐藏
+        setTimeout(() => {
+            hintPanel.style.display = 'block';
+            setTimeout(() => {
+                hintPanel.style.display = 'none';
+            }, 3000);
+        }, 500);
+    }
+
     // ===================== 空格键处理函数（移到外部避免重复创建） =====================
     // 同步按钮状态函数
     const syncButtonStates = (clickedButton) => {
@@ -921,6 +1001,7 @@
     function init() {
         createControlButtons();
         initDrawTool();
+        generateShortcutHint();
         isInitialized = true;
         console.log('试题、试卷页标注、全屏工具已加载完成');
 
