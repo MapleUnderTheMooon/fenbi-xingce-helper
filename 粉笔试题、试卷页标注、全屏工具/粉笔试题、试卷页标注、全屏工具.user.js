@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         粉笔试题、试卷页标注、全屏工具
 // @namespace    http://tampermonkey.net/
-// @version      0.0.11
+// @version      0.0.12
 // @description  试题、试卷页标注、全屏工具
 // @author       spl
 // @match        https://spa.fenbi.com/*/exam/*
@@ -787,8 +787,31 @@
             handler: expandedHoverOut
         });
 
-        // 组装展开容器（按钮顺序：清屏、橡皮擦、撤销、关闭）
-        expandedButtonsContainer.append(clearBtn, subButtonsContainer, closeBtn);
+        // Help按钮 - 绿色系（直观表示帮助操作）
+        const helpBtn = document.createElement('button');
+        helpBtn.style.cssText = buttonStyle + `
+            background: #e6f9e6;
+            color: #006600;
+        `;
+        helpBtn.innerHTML = '❓ Help';
+        helpBtn.id = 'help-btn';
+        
+        // Help点击事件
+        const helpClick = () => {
+            const hintPanel = document.querySelector('#shortcut-hint-panel');
+            if (hintPanel) {
+                if (hintPanel.style.display === 'block') {
+                    hintPanel.style.display = 'none';
+                } else {
+                    hintPanel.style.display = 'block';
+                }
+            }
+        };
+        helpBtn.addEventListener('click', helpClick);
+        resources.eventListeners.push({ element: helpBtn, type: 'click', handler: helpClick });
+        
+        // 组装展开容器（按钮顺序：清屏、橡皮擦、撤销、Help、关闭）
+        expandedButtonsContainer.append(clearBtn, subButtonsContainer, helpBtn, closeBtn);
         
         // 组装面板（圆球 + 展开容器）
         drawCtrlPanel.append(penBtn, expandedButtonsContainer);
@@ -870,13 +893,7 @@
             handler: toggleHintPanel
         });
 
-        // 初始显示3秒后自动隐藏
-        setTimeout(() => {
-            hintPanel.style.display = 'block';
-            setTimeout(() => {
-                hintPanel.style.display = 'none';
-            }, 3000);
-        }, 500);
+
     }
 
     // ===================== 空格键处理函数（移到外部避免重复创建） =====================
