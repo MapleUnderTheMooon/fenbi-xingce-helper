@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         粉笔试题、试卷页标注、全屏工具
 // @namespace    http://tampermonkey.net/
-// @version      0.0.9
+// @version      0.0.10
 // @description  试题、试卷页标注、全屏工具
 // @author       spl
 // @match        https://spa.fenbi.com/*/exam/*
@@ -132,6 +132,7 @@
         // 标注状态
         let isDrawing = false;
         let isPenToolActive = false;
+        window.isPenToolActive = false; // 暴露到全局窗口对象
         let currentMode = null; // 'pen' | 'eraser' | null
         let currentStroke = null; // 当前正在绘制的笔画
         const drawHistory = []; // 历史记录数组
@@ -496,6 +497,7 @@
             if (!isPenToolActive) {
                 // 激活笔工具（默认笔模式）
                 isPenToolActive = true;
+                window.isPenToolActive = true; // 同步到全局
                 currentMode = 'pen';
                 penBtn.style.background = '#4da6ff';
                 penBtn.innerHTML = '✏️';
@@ -650,6 +652,7 @@
         // 关闭画布函数（统一关闭逻辑）
         const closeCanvas = () => {
             isPenToolActive = false;
+            window.isPenToolActive = false; // 同步到全局
             currentMode = null;
             penBtn.style.background = '#4da6ff';
             penBtn.innerHTML = '✏️';
@@ -872,6 +875,18 @@
                     fullscreenBtn.innerText = '全屏';
                 }
                 console.log('H键：退出全屏');
+            }
+        } else if (e.code === 'KeyX') {
+            e.preventDefault(); // 阻止默认的 X 键行为
+            
+            // 检查画布是否开启
+            if (window.isPenToolActive) {
+                // 模拟点击清屏按钮
+                const clearBtn = document.querySelector('#clear-btn');
+                if (clearBtn) {
+                    clearBtn.click();
+                    console.log('X键：清屏');
+                }
             }
         }
     };
