@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         抖音&哔哩哔哩标注工具
 // @namespace    http://tampermonkey.net/
-// @version      0.0.2
+// @version      0.0.3
 // @description  抖音和哔哩哔哩网页标注工具，支持画笔、橡皮擦、撤销等功能
 // @author       spl
 // @match        https://www.douyin.com/*
@@ -469,12 +469,17 @@
         clearBtn.innerHTML = '🗑️ 清屏';
         clearBtn.id = 'clear-btn';
 
-        // 清屏点击事件
-        const clearClick = () => {
+        // 清屏功能核心逻辑
+        const clearCanvas = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             // 清空历史记录
             drawHistory.length = 0;
             // 只清除画布内容，不关闭画布
+        };
+
+        // 清屏点击事件
+        const clearClick = () => {
+            clearCanvas();
         };
         clearBtn.addEventListener('click', clearClick);
         resources.eventListeners.push({ element: clearBtn, type: 'click', handler: clearClick });
@@ -693,6 +698,19 @@
             if (e.ctrlKey && e.shiftKey && e.key === 'D') {
                 e.preventDefault();
                 toggleToolVisibility();
+            }
+            // 检查是否按下了X键（清屏功能）
+            else if (e.key === 'x' || e.key === 'X') {
+                // 只有在画布激活时才执行清屏
+                if (isPenToolActive) {
+                    e.preventDefault();
+                    clearCanvas();
+                    // 视觉反馈：清屏按钮闪烁
+                    clearBtn.style.background = '#ffd9cc';
+                    setTimeout(() => {
+                        clearBtn.style.background = '#fff2e6';
+                    }, 200);
+                }
             }
         };
 
