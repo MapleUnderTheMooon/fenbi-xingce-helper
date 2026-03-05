@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         抖音&哔哩哔哩标注工具
 // @namespace    http://tampermonkey.net/
-// @version      0.1.0
+// @version      0.2.0
 // @description  抖音和哔哩哔哩网页标注工具，支持画笔、橡皮擦、撤销等功能
 // @author       spl
 // @match        https://www.douyin.com/*
@@ -19,11 +19,12 @@
     };
 
     // ===================== 标注工具（带清理） =====================
+    let isPenToolActive = false; // 全局变量，用于控制视频加速功能
     function initDrawTool() {
         // Canvas图层 - 检查是否已存在，避免重复创建
         let canvas = document.querySelector('#custom-draw-canvas');
         let ctx;
-        
+
         if (canvas) {
             // 如果 canvas 已存在，复用现有的 canvas 和 ctx
             ctx = canvas.getContext('2d');
@@ -42,7 +43,6 @@
         }
 
         // 标注状态
-        let isPenToolActive = false;
         let isPenToolVisible = false; // 新增：控制工具是否可见
         let isDrawing = false; // 控制是否正在绘制
         let currentMode = null; // 'pen' | 'eraser' | null
@@ -227,9 +227,9 @@
             position: absolute; right: 0; top: 0; width: 50px; height: 50px;
             border-radius: 50%; background: #4da6ff;
             color: white; border: none;
-            font-size: 16px; font-weight: 600; cursor: move; 
+            font-size: 16px; font-weight: 600; cursor: move;
             box-shadow: 0 4px 15px rgba(77, 166, 255, 0.4);
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex; align-items: center; justify-content: center;
             text-align: center; padding: 0; user-select: none;
             backdrop-filter: blur(10px);
@@ -243,7 +243,7 @@
             position: absolute; right: 60px; top: 0;
             display: none; flex-direction: column; gap: 8px;
             padding: 12px;border-radius: 16px;
-            background: rgba(255, 255, 255, 0.95); 
+            background: rgba(255, 255, 255, 0.95);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
             backdrop-filter: blur(20px);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -309,7 +309,7 @@
         const startDrag = (e) => {
             // 如果正在绘制，不启动拖动
             if (isPenToolActive && isDrawing) return;
-            
+
             isDragging = true;
             hasDragged = false;
             dragStartX = e.clientX;
@@ -319,7 +319,7 @@
             panelStartY = rect.top;
             penBtn.style.cursor = 'grabbing';
             e.preventDefault();
-            
+
             // 添加mousemove和mouseup事件监听器
             document.addEventListener('mousemove', doDrag);
             document.addEventListener('mouseup', stopDrag);
@@ -330,22 +330,22 @@
             if (!isDragging) return;
             const deltaX = e.clientX - dragStartX;
             const deltaY = e.clientY - dragStartY;
-            
+
             // 如果移动距离超过5px，认为发生了拖动
             if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
                 hasDragged = true;
             }
-            
+
             // 计算新位置
             const newX = panelStartX + deltaX;
             const newY = panelStartY + deltaY;
-            
+
             // 限制在可视区域内
             const maxX = window.innerWidth - 50;
             const maxY = window.innerHeight - 50;
             const clampedX = Math.max(0, Math.min(newX, maxX));
             const clampedY = Math.max(0, Math.min(newY, maxY));
-            
+
             // 直接设置位置，跟随鼠标
             drawCtrlPanel.style.left = clampedX + 'px';
             drawCtrlPanel.style.top = clampedY + 'px';
@@ -358,11 +358,11 @@
             if (isDragging) {
                 isDragging = false;
                 penBtn.style.cursor = isPenToolActive ? 'pointer' : 'move';
-                
+
                 // 移除mousemove和mouseup事件监听器
                 document.removeEventListener('mousemove', doDrag);
                 document.removeEventListener('mouseup', stopDrag);
-                
+
                 // 如果发生了拖动，延迟重置 hasDragged，避免触发点击事件
                 if (hasDragged) {
                     setTimeout(() => {
@@ -374,7 +374,7 @@
 
         // 添加mousedown事件监听器
         penBtn.addEventListener('mousedown', startDrag, { passive: false });
-        
+
         // 注册资源清理
         resources.eventListeners.push({ element: penBtn, type: 'mousedown', handler: startDrag });
         // mousemove和mouseup事件在startDrag中动态添加，stopDrag中移除，无需注册到资源清理列表
@@ -386,7 +386,7 @@
                 e.preventDefault();
                 return;
             }
-            
+
             if (!isPenToolActive) {
                 // 激活笔工具（默认笔模式）
                 isPenToolActive = true;
@@ -533,7 +533,7 @@
             const panelRect = drawCtrlPanel.getBoundingClientRect();
             const containerWidth = 124; // 展开容器宽度（包含padding和gap）
             const screenWidth = window.innerWidth;
-            
+
             // 如果圆球在屏幕右侧，展开容器显示在左侧
             if (panelRect.right > screenWidth / 2) {
                 expandedButtonsContainer.style.right = '60px';
@@ -585,7 +585,7 @@
             // 延迟隐藏按钮列表
             scheduleHide();
         };
-        
+
         // 展开容器的悬停事件（防止鼠标移动到展开容器时隐藏）
         const expandedHoverIn = () => {
             // 清除任何待执行的隐藏操作
@@ -604,7 +604,7 @@
             // 延迟隐藏按钮列表
             scheduleHide();
         };
-        
+
         // 绑定悬停事件
         drawCtrlPanel.addEventListener('mouseenter', panelHoverIn);
         drawCtrlPanel.addEventListener('mouseleave', panelHoverOut);
@@ -633,11 +633,11 @@
 
         // 组装展开容器（按钮顺序：清屏、橡皮擦、撤销、关闭）
         expandedButtonsContainer.append(clearBtn, subButtonsContainer, closeBtn);
-        
+
         // 组装面板（圆球 + 展开容器）
         drawCtrlPanel.append(penBtn, expandedButtonsContainer);
         document.body.appendChild(drawCtrlPanel);
-        
+
         // 初始状态：隐藏整个面板（通过CSS display: none）
         drawCtrlPanel.style.display = 'none';
         expandedButtonsContainer.style.display = 'none';
@@ -702,7 +702,7 @@
                 toggleToolVisibility();
                 return;
             }
-            
+
             // 只有在画布激活时才处理其他快捷键
             if (isPenToolActive) {
                 // 检查是否按下了X键（清屏功能）
@@ -718,7 +718,7 @@
                     }, 200);
                     return;
                 }
-                
+
                 // 检查是否按下了E键（切换画笔/橡皮擦）
                 if (e.key === 'e' || e.key === 'E') {
                     e.preventDefault();
@@ -727,7 +727,7 @@
                     eraserClick();
                     return;
                 }
-                
+
                 // 检查是否按下了Ctrl+Z（撤销）
                 if (e.ctrlKey && e.key === 'z') {
                     e.preventDefault();
@@ -736,7 +736,7 @@
                     undoClick();
                     return;
                 }
-                
+
                 // 检查是否按下了Esc键（关闭工具）
                 if (e.key === 'Escape') {
                     e.preventDefault();
@@ -789,11 +789,140 @@
         document.body.style.cursor = 'default';
     }
 
+    // ===================== 长按鼠标左键加速视频功能 =====================
+    function initLongPressMouse() {
+        let mouseDownX = 0;
+        let mouseDownY = 0;
+        let isLongPressActive = false;
+        let isLongPressPending = false; // 标记长按定时器是否正在运行
+        let longPressTimer = null;
+        let originalPlaybackRate = 1;
+        const LONG_PRESS_DURATION = 500;
+        const MOVE_THRESHOLD = 10;
+        const FAST_SPEED = 2.0;
+
+        function getVideoElement() {
+            return document.querySelector('video');
+        }
+
+        function getSpeedDisplayElement() {
+            // 抖音倍速显示元素（根据用户提供的结构）
+            const douyinSpeed = document.querySelector('.xgplayer-setting-playbackRatio');
+            if (douyinSpeed) return douyinSpeed;
+
+            // B站倍速显示元素
+            const bilibiliSpeed = document.querySelector('.bpx-player-ctrl-playbackrate-menu .current');
+            if (bilibiliSpeed) return bilibiliSpeed;
+
+            // 其他可能的倍速显示元素
+            const speedElements = document.querySelectorAll('[class*=speed], [class*=rate]');
+            for (const element of speedElements) {
+                if (element.textContent.includes('x')) {
+                    return element;
+                }
+            }
+
+            return null;
+        }
+
+        function updateSpeedDisplay(speed) {
+            const speedElement = getSpeedDisplayElement();
+            if (speedElement) {
+                speedElement.textContent = `${speed}.0x`;
+            }
+        }
+
+        function triggerLongPress() {
+            const video = getVideoElement();
+            if (!video) {
+                console.log('未找到视频元素');
+                return;
+            }
+
+            if (!isLongPressActive) {
+                isLongPressActive = true;
+                originalPlaybackRate = video.playbackRate || 1;
+                video.playbackRate = FAST_SPEED;
+                updateSpeedDisplay(FAST_SPEED);
+                console.log(`长按鼠标左键触发，视频速度设置为${FAST_SPEED}倍`);
+            }
+        }
+
+        function restoreVideoSpeed() {
+            const video = getVideoElement();
+            if (video && isLongPressActive) {
+                video.playbackRate = originalPlaybackRate;
+                updateSpeedDisplay(originalPlaybackRate);
+                console.log(`鼠标释放，视频速度恢复为${originalPlaybackRate}倍`);
+                isLongPressActive = false;
+            }
+        }
+
+        // 点击事件阻止函数
+        const clickPreventHandler = (e) => {
+            if (isLongPressActive || isLongPressPending) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('长按期间禁止点击事件');
+            }
+        };
+
+        const mouseDownHandler = (e) => {
+            if (e.button !== 0) return;
+            
+            // 只有在画布激活时才启用视频加速功能
+            if (!isPenToolActive) return;
+
+            mouseDownX = e.clientX;
+            mouseDownY = e.clientY;
+            isLongPressActive = false;
+            isLongPressPending = true; // 标记长按定时器开始运行
+
+            longPressTimer = setTimeout(triggerLongPress, LONG_PRESS_DURATION);
+        };
+
+        const mouseMoveHandler = (e) => {
+            const deltaX = Math.abs(e.clientX - mouseDownX);
+            const deltaY = Math.abs(e.clientY - mouseDownY);
+
+            if (deltaX > MOVE_THRESHOLD || deltaY > MOVE_THRESHOLD) {
+                if (longPressTimer) {
+                    clearTimeout(longPressTimer);
+                    longPressTimer = null;
+                    isLongPressPending = false; // 清除长按待处理状态
+                }
+            }
+        };
+
+        const mouseUpHandler = (e) => {
+            if (e.button !== 0) return;
+
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+                isLongPressPending = false; // 清除长按待处理状态
+            }
+
+            restoreVideoSpeed();
+        };
+
+        document.addEventListener('mousedown', mouseDownHandler, { capture: true });
+        document.addEventListener('mousemove', mouseMoveHandler, { capture: true });
+        document.addEventListener('mouseup', mouseUpHandler, { capture: true });
+        document.addEventListener('click', clickPreventHandler, { capture: true }); // 阻止点击事件
+
+        resources.eventListeners.push({ element: document, type: 'mousedown', handler: mouseDownHandler });
+        resources.eventListeners.push({ element: document, type: 'mousemove', handler: mouseMoveHandler });
+        resources.eventListeners.push({ element: document, type: 'mouseup', handler: mouseUpHandler });
+        resources.eventListeners.push({ element: document, type: 'click', handler: clickPreventHandler });
+    }
+
     // ===================== 初始化 & 绑定页面销毁事件 =====================
     let isInitialized = false;
 
     function init() {
         initDrawTool();
+        initLongPressMouse();
         isInitialized = true;
         console.log('抖音&哔哩哔哩标注工具已加载完成');
         console.log('快捷键说明：');
@@ -802,6 +931,7 @@
         console.log('  E - 切换画笔/橡皮擦');
         console.log('  Ctrl+Z - 撤销');
         console.log('  Esc - 关闭工具');
+        console.log('  长按鼠标左键 - 视频加速到2倍速');
 
         // 页面卸载时清理资源
         window.addEventListener('beforeunload', cleanUpAllResources);
