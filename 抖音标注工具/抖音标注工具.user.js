@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         抖音&哔哩哔哩标注工具
 // @namespace    http://tampermonkey.net/
-// @version      0.0.3
+// @version      0.1.0
 // @description  抖音和哔哩哔哩网页标注工具，支持画笔、橡皮擦、撤销等功能
 // @author       spl
 // @match        https://www.douyin.com/*
@@ -276,7 +276,7 @@
             background: #f0f0f0;
             color: #333333;
         `;
-        eraserBtn.innerHTML = '🧽 橡皮擦';
+        eraserBtn.innerHTML = '🧽 橡皮擦 <span style="font-size: 12px; opacity: 0.7; margin-left: 5px;">(E)</span>';
         eraserBtn.id = 'eraser-btn';
 
         // 撤销按钮 - 蓝色系（直观表示返回操作）
@@ -285,7 +285,7 @@
             background: #e6f2ff;
             color: #0066cc;
         `;
-        undoBtn.innerHTML = '↩ 撤销';
+        undoBtn.innerHTML = '↩ 撤销 <span style="font-size: 12px; opacity: 0.7; margin-left: 5px;">(Ctrl+Z)</span>';
         undoBtn.id = 'undo-btn';
 
         // 组装子按钮容器
@@ -466,7 +466,7 @@
             background: #fff2e6;
             color: #ff6600;
         `;
-        clearBtn.innerHTML = '🗑️ 清屏';
+        clearBtn.innerHTML = '🗑️ 清屏 <span style="font-size: 12px; opacity: 0.7; margin-left: 5px;">(X)</span>';
         clearBtn.id = 'clear-btn';
 
         // 清屏功能核心逻辑
@@ -490,7 +490,7 @@
             background: #ffe6e6;
             color: #cc0000;
         `;
-        closeBtn.innerHTML = '❌ 关闭';
+        closeBtn.innerHTML = '❌ 关闭 <span style="font-size: 12px; opacity: 0.7; margin-left: 5px;">(Esc)</span>';
         closeBtn.id = 'close-canvas-btn';
         resources.elements.push(closeBtn); // 加入清理列表
 
@@ -692,29 +692,64 @@
             }
         };
 
-        // 键盘快捷键：Ctrl+Shift+D（避免抖音监控的键）
+        // 键盘快捷键处理
         const handleKeyPress = (e) => {
-            // 检查是否按下了Ctrl+Shift+D
+            // 检查是否按下了Ctrl+Shift+D（显示/隐藏工具）
             if (e.ctrlKey && e.shiftKey && e.key === 'D') {
                 e.preventDefault();
+                e.stopPropagation(); // 阻止事件传播
+                e.stopImmediatePropagation(); // 阻止同一元素上的其他事件监听器
                 toggleToolVisibility();
+                return;
             }
-            // 检查是否按下了X键（清屏功能）
-            else if (e.key === 'x' || e.key === 'X') {
-                // 只有在画布激活时才执行清屏
-                if (isPenToolActive) {
+            
+            // 只有在画布激活时才处理其他快捷键
+            if (isPenToolActive) {
+                // 检查是否按下了X键（清屏功能）
+                if (e.key === 'x' || e.key === 'X') {
                     e.preventDefault();
+                    e.stopPropagation(); // 阻止事件传播
+                    e.stopImmediatePropagation(); // 阻止同一元素上的其他事件监听器
                     clearCanvas();
                     // 视觉反馈：清屏按钮闪烁
                     clearBtn.style.background = '#ffd9cc';
                     setTimeout(() => {
                         clearBtn.style.background = '#fff2e6';
                     }, 200);
+                    return;
+                }
+                
+                // 检查是否按下了E键（切换画笔/橡皮擦）
+                if (e.key === 'e' || e.key === 'E') {
+                    e.preventDefault();
+                    e.stopPropagation(); // 阻止事件传播
+                    e.stopImmediatePropagation(); // 阻止同一元素上的其他事件监听器
+                    eraserClick();
+                    return;
+                }
+                
+                // 检查是否按下了Ctrl+Z（撤销）
+                if (e.ctrlKey && e.key === 'z') {
+                    e.preventDefault();
+                    e.stopPropagation(); // 阻止事件传播
+                    e.stopImmediatePropagation(); // 阻止同一元素上的其他事件监听器
+                    undoClick();
+                    return;
+                }
+                
+                // 检查是否按下了Esc键（关闭工具）
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    e.stopPropagation(); // 阻止事件传播
+                    e.stopImmediatePropagation(); // 阻止同一元素上的其他事件监听器
+                    closeCanvas();
+                    return;
                 }
             }
         };
 
-        window.addEventListener('keydown', handleKeyPress);
+        // 在捕获阶段添加事件监听器，优先于网站的事件处理
+        window.addEventListener('keydown', handleKeyPress, { capture: true });
         resources.eventListeners.push({
             element: window,
             type: 'keydown',
@@ -760,7 +795,13 @@
     function init() {
         initDrawTool();
         isInitialized = true;
-        console.log('抖音&哔哩哔哩标注工具已加载完成，按 Ctrl+Shift+D 显示/隐藏工具');
+        console.log('抖音&哔哩哔哩标注工具已加载完成');
+        console.log('快捷键说明：');
+        console.log('  Ctrl+Shift+D - 显示/隐藏工具');
+        console.log('  X - 清屏');
+        console.log('  E - 切换画笔/橡皮擦');
+        console.log('  Ctrl+Z - 撤销');
+        console.log('  Esc - 关闭工具');
 
         // 页面卸载时清理资源
         window.addEventListener('beforeunload', cleanUpAllResources);
