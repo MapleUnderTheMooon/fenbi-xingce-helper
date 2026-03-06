@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         抖音&哔哩哔哩标注工具
 // @namespace    http://tampermonkey.net/
-// @version      0.2.0
+// @version      0.2.2
 // @description  抖音和哔哩哔哩网页标注工具，支持画笔、橡皮擦、撤销等功能
 // @author       spl
 // @match        https://www.douyin.com/*
@@ -802,7 +802,51 @@
         const FAST_SPEED = 2.0;
 
         function getVideoElement() {
-            return document.querySelector('video');
+            const videos = document.querySelectorAll('video');
+            if (videos.length === 0) return null;
+            
+            // 视口尺寸
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+            
+            let bestVideo = null;
+            let bestScore = 0;
+            
+            videos.forEach(video => {
+                const rect = video.getBoundingClientRect();
+                
+                // 检查视频是否在视口内
+                const isVisible = (
+                    rect.top < viewportHeight &&
+                    rect.bottom > 0 &&
+                    rect.left < viewportWidth &&
+                    rect.right > 0
+                );
+                
+                if (isVisible) {
+                    // 计算视频在视口内的面积
+                    const overlapWidth = Math.min(rect.right, viewportWidth) - Math.max(rect.left, 0);
+                    const overlapHeight = Math.min(rect.bottom, viewportHeight) - Math.max(rect.top, 0);
+                    const overlapArea = overlapWidth * overlapHeight;
+                    
+                    // 计算视频本身的面积
+                    const videoArea = rect.width * rect.height;
+                    
+                    // 计算可见比例
+                    const visibilityRatio = overlapArea / videoArea;
+                    
+                    // 综合评分：可见面积 + 可见比例
+                    const score = overlapArea + visibilityRatio * 1000;
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestVideo = video;
+                    }
+                }
+            });
+            
+            // 如果没有找到在视口内的视频，返回第一个视频
+            return bestVideo || videos[0];
         }
 
         function getSpeedDisplayElement() {
@@ -826,7 +870,37 @@
         }
 
         function updateSpeedDisplay(speed) {
-            const speedElement = getSpeedDisplayElement();
+            const video = getVideoElement();
+            if (!video) return;
+            
+            // 从当前视频元素开始，向上遍历DOM树，找到对应的倍速显示元素
+            let parent = video.parentElement;
+            let speedElement = null;
+            
+            // 向上遍历最多10层，避免无限循环
+            for (let i = 0; i < 10 && parent; i++) {
+                // 查找当前父元素下的倍速显示元素
+                speedElement = parent.querySelector('.xgplayer-setting-playbackRatio');
+                if (speedElement) break;
+                
+                // 查找其他可能的倍速显示元素
+                const speedElements = parent.querySelectorAll('[class*=speed], [class*=rate]');
+                for (const element of speedElements) {
+                    if (element.textContent.includes('倍速')) {
+                        speedElement = element;
+                        break;
+                    }
+                }
+                if (speedElement) break;
+                
+                parent = parent.parentElement;
+            }
+            
+            // 如果没有找到，使用原来的方法
+            if (!speedElement) {
+                speedElement = getSpeedDisplayElement();
+            }
+            
             if (speedElement) {
                 speedElement.textContent = `${speed}.0x`;
             }
