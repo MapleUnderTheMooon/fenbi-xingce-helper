@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         抖音&哔哩哔哩标注工具
 // @namespace    http://tampermonkey.net/
-// @version      0.2.2
+// @version      0.3.0
 // @description  抖音和哔哩哔哩网页标注工具，支持画笔、橡皮擦、撤销等功能
 // @author       spl
 // @match        https://www.douyin.com/*
@@ -51,7 +51,12 @@
         const MAX_HISTORY = 100; // 最大历史记录数
         const MIN_POINT_DISTANCE = 3; // 最小采样距离（像素）
         const drawColor = '#ff0000';
-        const drawWidth = 2;
+        
+        // 工具大小设置
+        const DEFAULT_PEN_SIZE = 2;
+        const DEFAULT_ERASER_SIZE = 10;
+        let penSize = DEFAULT_PEN_SIZE;
+        let eraserSize = DEFAULT_ERASER_SIZE;
 
         // 重绘所有笔画
         function redrawAll() {
@@ -74,7 +79,7 @@
                     ctx.globalCompositeOperation = 'destination-out';
                     for (let i = 0; i < item.points.length; i++) {
                         ctx.beginPath();
-                        ctx.arc(item.points[i].x, item.points[i].y, 10, 0, Math.PI * 2);
+                        ctx.arc(item.points[i].x, item.points[i].y, item.eraserSize, 0, Math.PI * 2);
                         ctx.fill();
                     }
                     ctx.restore();
@@ -109,13 +114,14 @@
                 id: Date.now(),
                 type: currentMode,
                 points: [{x: e.clientX, y: e.clientY}],
-                lineWidth: currentMode === 'pen' ? 2 : 20
+                lineWidth: currentMode === 'pen' ? penSize : 20,
+                eraserSize: currentMode === 'eraser' ? eraserSize : 10
             };
 
             if (currentMode === 'pen') {
                 ctx.beginPath();
                 ctx.moveTo(e.clientX, e.clientY);
-                ctx.lineWidth = drawWidth;
+                ctx.lineWidth = penSize;
                 ctx.strokeStyle = drawColor;
                 ctx.lineCap = 'round';
             } else if (currentMode === 'eraser') {
@@ -123,7 +129,7 @@
                 ctx.save();
                 ctx.globalCompositeOperation = 'destination-out';
                 ctx.beginPath();
-                ctx.arc(e.clientX, e.clientY, 10, 0, Math.PI * 2);
+                ctx.arc(e.clientX, e.clientY, eraserSize, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.restore();
             }
@@ -149,7 +155,7 @@
                 ctx.save();
                 ctx.globalCompositeOperation = 'destination-out';
                 ctx.beginPath();
-                ctx.arc(e.clientX, e.clientY, 10, 0, Math.PI * 2);
+                ctx.arc(e.clientX, e.clientY, eraserSize, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.restore();
             }
@@ -193,14 +199,33 @@
         resources.eventListeners.push({ element: canvas, type: 'mouseup', handler: drawMouseUp });
         resources.eventListeners.push({ element: canvas, type: 'mouseleave', handler: drawMouseLeave });
 
-        // 滚轮事件：允许页面滚动
+        // 滚轮事件：调整工具大小
         const wheelEvent = (e) => {
             // 如果正在绘制，不处理滚轮事件
             if (isDrawing) return;
-            // 未按下鼠标时，不阻止默认行为，让浏览器自然处理滚轮事件，实现丝滑的页面滚动
-            // 不调用 e.preventDefault()，让页面自然滚动
+            
+            // 只有在画布激活时才处理滚轮调整大小
+            if (isPenToolActive && currentMode) {
+                e.preventDefault(); // 阻止默认滚动行为
+                
+                // 计算调整量
+                const delta = e.deltaY > 0 ? -1 : 1;
+                
+                if (currentMode === 'pen') {
+                    // 调整画笔大小（范围：1-20px）
+                    penSize = Math.max(1, Math.min(20, penSize + delta));
+                } else if (currentMode === 'eraser') {
+                    // 调整橡皮擦大小（范围：5-50px）
+                    eraserSize = Math.max(5, Math.min(50, eraserSize + delta));
+                    // 同步更新橡皮擦光标
+                    const newCursor = getEraserCursorUrl(eraserSize);
+                    canvas.style.cursor = newCursor;
+                    document.body.style.cursor = newCursor;
+                }
+            }
+            // 未激活时，让浏览器自然处理滚轮事件
         };
-        canvas.addEventListener('wheel', wheelEvent, { passive: true });
+        canvas.addEventListener('wheel', wheelEvent, { passive: false });
         resources.eventListeners.push({ element: canvas, type: 'wheel', handler: wheelEvent });
 
         // 标注面板 - 检查是否已存在，避免重复创建
@@ -293,8 +318,16 @@
 
         // 光标定义
         const penCursorUrl = 'url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScyOCcgaGVpZ2h0PScyOCcgdmlld0JveD0nMCAwIDI4IDI4Jz48cGF0aCBkPSdNMTkuOCAyLjJjLjYtLjYgMS42LS42IDIuMiAwbDMuOCAzLjhjLjYuNi42IDEuNiAwIDIuMkwxMSAyM2wtNiAxLjggMS44LTUuOCAxMy0xNi44eicgZmlsbD0nIzU1NTU1NScvPjxwYXRoIGQ9J00xOC42IDMuNGw0IDQnIHN0cm9rZT0nI2ZmZicgc3Ryb2tlLXdpZHRoPScxLjInIG9wYWNpdHk9Jy42Jy8+PC9zdmc+") 4 24, auto';
-        // 橡皮擦光标：圆形虚线框（半径10px，直径30px）
-        const eraserCursorUrl = 'url("data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAiIGhlaWdodD0iMzAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iMTUiIGN5PSIxNSIgcj0iMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzU1NSIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtZGFzaGFycmF5PSIzLDMiLz48L3N2Zz4=") 15 15, auto';
+        
+        // 动态生成橡皮擦光标URL
+        function getEraserCursorUrl(size) {
+            // SVG尺寸：直径 + 10px边距
+            const svgSize = size * 2 + 10;
+            const center = svgSize / 2;
+            const svg = `<svg width="${svgSize}" height="${svgSize}" xmlns="http://www.w3.org/2000/svg"><circle cx="${center}" cy="${center}" r="${size}" fill="none" stroke="#555" stroke-width="2" stroke-dasharray="3,3"/></svg>`;
+            const base64 = btoa(unescape(encodeURIComponent(svg)));
+            return `url("data:image/svg+xml;base64,${base64}") ${center} ${center}, auto`;
+        }
 
         // 拖动功能 - 全新实现，确保精确跟随鼠标
         // 拖动功能 - 简化实现，参考粉笔工具
@@ -421,6 +454,7 @@
                 // 切换到橡皮擦模式
                 currentMode = 'eraser';
                 eraserBtn.style.background = '#d9d9d9';
+                const eraserCursorUrl = getEraserCursorUrl(eraserSize);
                 canvas.style.cursor = eraserCursorUrl;
                 document.body.style.cursor = eraserCursorUrl;
             } else if (currentMode === 'eraser') {
@@ -510,6 +544,9 @@
             expandedButtonsContainer.style.display = 'none';
             // 重置橡皮擦按钮样式
             eraserBtn.style.background = '#f0f0f0';
+            // 恢复工具大小到默认值
+            penSize = DEFAULT_PEN_SIZE;
+            eraserSize = DEFAULT_ERASER_SIZE;
         };
 
         // 关闭按钮点击事件
