@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         抖音&哔哩哔哩标注工具
 // @namespace    http://tampermonkey.net/
-// @version      0.3.0
+// @version      0.4.0
 // @description  抖音和哔哩哔哩网页标注工具，支持画笔、橡皮擦、撤销等功能
 // @author       spl
 // @match        https://www.douyin.com/*
@@ -518,6 +518,66 @@
         clearBtn.addEventListener('click', clearClick);
         resources.eventListeners.push({ element: clearBtn, type: 'click', handler: clearClick });
 
+        // 保存按钮 - 绿色系（直观表示保存操作）
+        const saveBtn = document.createElement('button');
+        saveBtn.style.cssText = buttonStyle + `
+            background: #e6fff2;
+            color: #00994d;
+        `;
+        saveBtn.innerHTML = '💾 保存 <span style="font-size: 12px; opacity: 0.7; margin-left: 5px;">(S)</span>';
+        saveBtn.id = 'save-btn';
+
+        // 保存功能核心逻辑
+        const saveCanvas = () => {
+            try {
+                // 创建一个新的Canvas，设置白色背景
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                const tempCtx = tempCanvas.getContext('2d');
+                
+                // 填充白色背景
+                tempCtx.fillStyle = '#ffffff';
+                tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                
+                // 将原Canvas内容绘制到新Canvas上
+                tempCtx.drawImage(canvas, 0, 0);
+                
+                // 将新Canvas内容转换为PNG图片
+                const dataURL = tempCanvas.toDataURL('image/png');
+                
+                // 创建下载链接
+                const link = document.createElement('a');
+                link.href = dataURL;
+                
+                // 生成唯一文件名，包含时间戳
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                link.download = `标注截图_${timestamp}.png`;
+                
+                // 触发下载
+                link.click();
+                
+                // 清理临时链接
+                setTimeout(() => {
+                    URL.revokeObjectURL(dataURL);
+                }, 100);
+            } catch (error) {
+                console.error('保存图片失败:', error);
+            }
+        };
+
+        // 保存点击事件
+        const saveClick = () => {
+            saveCanvas();
+            // 视觉反馈：按钮闪烁
+            saveBtn.style.background = '#ccffe6';
+            setTimeout(() => {
+                saveBtn.style.background = '#e6fff2';
+            }, 200);
+        };
+        saveBtn.addEventListener('click', saveClick);
+        resources.eventListeners.push({ element: saveBtn, type: 'click', handler: saveClick });
+
         // 关闭画布按钮（X按钮） - 红色系（直观表示关闭操作）
         const closeBtn = document.createElement('button');
         closeBtn.style.cssText = buttonStyle + `
@@ -668,8 +728,8 @@
             handler: expandedHoverOut
         });
 
-        // 组装展开容器（按钮顺序：清屏、橡皮擦、撤销、关闭）
-        expandedButtonsContainer.append(clearBtn, subButtonsContainer, closeBtn);
+        // 组装展开容器（按钮顺序：清屏、保存、橡皮擦、撤销、关闭）
+        expandedButtonsContainer.append(clearBtn, saveBtn, subButtonsContainer, closeBtn);
 
         // 组装面板（圆球 + 展开容器）
         drawCtrlPanel.append(penBtn, expandedButtonsContainer);
@@ -762,6 +822,15 @@
                     e.stopPropagation(); // 阻止事件传播
                     e.stopImmediatePropagation(); // 阻止同一元素上的其他事件监听器
                     eraserClick();
+                    return;
+                }
+
+                // 检查是否按下了S键（保存）
+                if (e.key === 's' || e.key === 'S') {
+                    e.preventDefault();
+                    e.stopPropagation(); // 阻止事件传播
+                    e.stopImmediatePropagation(); // 阻止同一元素上的其他事件监听器
+                    saveClick();
                     return;
                 }
 
@@ -1040,6 +1109,7 @@
         console.log('  Ctrl+Shift+D - 显示/隐藏工具');
         console.log('  X - 清屏');
         console.log('  E - 切换画笔/橡皮擦');
+        console.log('  S - 保存标注');
         console.log('  Ctrl+Z - 撤销');
         console.log('  Esc - 关闭工具');
         console.log('  长按鼠标左键 - 视频加速到2倍速');
